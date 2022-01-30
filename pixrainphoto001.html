@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Trying Canvas</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<style>
+			.canvas{
+				border: 1px solid black;
+				/* to put in centre of screen */
+				position: absolute;
+				background: black;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%,-50%);
+				border-radius: 25px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Practicing with Canvas</h1>
+		<a href="https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial" target="_blank">MDN Tutorial</a>
+		<br/>
+		<a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/getImageData" target="_blank">CTX.getImageData()</a>
+		<h2>Good Luck</h2>
+			<canvas id="myCan" class="canvas"></canvas>
+	</body>
+	<script src="SpiderGwenArt.js"></script>
+	<script src="CapAmerica.js"></script>
+	<script>
+		/*
+		** I want to instantiate an object and the run it...
+		*/
+
+		/*
+		* the takeaway is that you don't need to attach an event
+		* listener when you load a string. Actually, the console was
+		* kicking back an error to me. 
+		*/
+		//adjusting gwenArt
+		// Can't adjust because Canvas uses the photo's SRC
+		let alphaChill = 0;
+				
+		class Particle{
+			constructor(canWidth, canHeight){
+				this.x = canWidth*Math.random();
+				this.y = Math.random()*canHeight;
+				this.size = 0.5+Math.random();
+				this.dubSize = false;
+				this.velo = Math.random()+1;
+				this.alpha = 1;
+			}
+			update(canHeight, speedArray, xxspd){
+				const floorX = Math.floor(this.x);
+				const floorY = Math.floor(this.y);
+				const exSpeed = speedArray[floorY][floorX]
+				let rawAlpha = (1-exSpeed/xxspd);
+				this.alpha = Math.max(.25, Math.min(1,rawAlpha*1.5))
+				
+				if(alphaChill == 1000000){
+					console.log(this.alpha)
+					console.log(exSpeed)
+					console.log(xxspd)
+				}
+				if(alphaChill < 1000005){
+					alphaChill++
+				}
+				
+				this.y+= this.velo + exSpeed;
+				if(this.y > canHeight){
+					this.y=0;
+				}
+				return null;
+			}
+			draw(context){
+				//this.alpha = .5;
+				context.fillStyle = `rgba(0,255,255,${this.alpha})`;
+				context.beginPath()
+				let realsize = this.size
+				if(this.dubSize){
+					realsize *= 2
+				}
+				context.arc(this.x,this.y,realsize,0,Math.PI*2)
+				context.fill();
+				return null;
+			}
+		}
+		
+		function addParticles(canWidth, canHeight, numOfParticles = 0){
+			const particleList = [];
+			for(let pt = 0; pt < numOfParticles; pt++){
+				const thisParticle = new Particle(canWidth, canHeight);
+				particleList.push(thisParticle);
+			}
+			return particleList;
+		}
+		function animateCanvas(p_list, context, canWidth, canHeight, speedArray, xxspd){
+			context.fillStyle = "rgba(0,0,0,.7)";		
+			context.fillRect(0,0, canWidth,canHeight);
+			for(let eachParticle of p_list){
+				eachParticle.update(canHeight, speedArray, xxspd);
+				eachParticle.draw(context);
+			}
+			requestAnimationFrame(()=>{
+				animateCanvas(p_list,context, canWidth, canHeight, speedArray,xxspd);
+			})
+			return null;
+		}
+		
+		function makeSpeedArray(scanImgArray, exSpeed){
+			const {data: imgData, width:imgWidth, height: imgHeight} = scanImgArray;
+			let speedArray = [];
+			
+			for(let y = 0; y < imgHeight; y++){
+				let imgRow = [];
+				let excess = y*imgWidth*4
+				
+				for(let x = 0; x < imgWidth; x++){
+					let cix = x*4 + excess;					
+					let pixRed = imgData[cix];
+					let pixGrn = imgData[cix+1];
+					let pixBlu = imgData[cix+2];
+					let pixAlpha = imgData[cix+3]
+					let avgClr = (pixRed+pixGrn+pixBlu)/3;
+					
+					imgRow.push(exSpeed*(avgClr/255));
+				};
+				speedArray.push(imgRow);
+			};
+			return speedArray;
+		}
+		
+		function drawIt(){
+			const canvas = document.getElementById("myCan");
+			if(canvas.getContext){
+				/* in case canvas is not supported */
+				const ctx = canvas.getContext("2d");
+				const extraSpeed = 4;
+
+				//insert art
+				const canvasScale = .7;
+				const canvasArt = new Image();
+				canvasArt.src = capAmerica_src;
+				console.log(canvasArt)
+				console.log(canvasArt.width, canvasArt.height)
+				canvas.width = canvasArt.width*canvasScale;
+				canvas.height = canvasArt.height*canvasScale;
+				ctx.drawImage(canvasArt,0,0,canvas.width,canvas.height)
+
+				const scannedImg = ctx.getImageData(0,0,canvas.width, canvas.height);
+				
+				const speedArray = makeSpeedArray(scannedImg, extraSpeed); //X,Y into 2D array
+				console.log(speedArray)
+				const p_list = addParticles(canvas.width, canvas.height, 11000);
+				console.log(p_list);
+				//animateCanvas(p_list, ctx, canvas.width, canvas.height, speedArray, extraSpeed);
+				
+				//create particles, move particles each iteration
+				
+				//requestAnimationFrame(callback)
+			}
+		}
+		window.addEventListener("load",drawIt);
+	</script>
+	
+</html>
+
+<!-- 
+Path2d
+	addPath
+	arc
+	arcTo
+	bezierCurveTo
+	closePath
+	ellipse
+	lineTo
+	moveTo
+	quadraticCurveTo
+	rect
+ctx.textAlign = "left,right,center,start,end"
+-->
+<!-- 
+let color be the string "rgba(r,g,b,a)"
+context.fillStyle = Color
+context.strokeStyle = color
+you can even use loops to change color values as the line or arc is drawn ;)
+-->
+
+<!-- 
+Eegor
+No information about going back at end of January, English replacement...?
+Next Friday is Donna's last day. Moving on! BP team is losing a lot of people.
+You can send an email
+ -->
+<!--
+const scannedImage = ctx.getImageData(0,0,width,height) -> imageData[data, height,width]
+-->
+<!--
+https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/textAlign
+has methods on side /
+
+create data string with toDataURL() on image / base 64 -> starts with data:image/png
+-->
